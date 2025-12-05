@@ -1,6 +1,78 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const pool = require("../db");
 
-// TODO: Implement user routes
+router.get("/", async (req, res) => {
+  const [rows] = await pool.query("SELECT * FROM users");
+  res.json(rows);
+});
+
+router.post("/", async (req, res) => {
+  const {
+    name,
+    email,
+    role,
+    avatarUrl,
+    jobPosition,
+    birthday,
+    dateHired,
+    phone,
+    address,
+    department,
+  } = req.body;
+  const [result] = await pool.query(
+    "INSERT INTO users (name, email, role, avatarUrl, jobPosition, birthday, dateHired, phone, address, department) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [
+      name,
+      email,
+      role,
+      avatarUrl,
+      jobPosition,
+      birthday,
+      dateHired,
+      phone,
+      address,
+      department,
+    ]
+  );
+  res.json({ id: result.insertId, ...req.body });
+});
+
+router.put("/:id", async (req, res) => {
+  const {
+    name,
+    email,
+    role,
+    avatarUrl,
+    jobPosition,
+    birthday,
+    dateHired,
+    phone,
+    address,
+    department,
+  } = req.body;
+  await pool.query(
+    "UPDATE users SET name=?, email=?, role=?, avatarUrl=?, jobPosition=?, birthday=?, dateHired=?, phone=?, address=?, department=? WHERE id=?",
+    [
+      name,
+      email,
+      role,
+      avatarUrl,
+      jobPosition,
+      birthday,
+      dateHired,
+      phone,
+      address,
+      department,
+      req.params.id,
+    ]
+  );
+  res.json({ id: req.params.id, ...req.body });
+});
+
+router.delete("/:id", async (req, res) => {
+  await pool.query("DELETE FROM users WHERE id=?", [req.params.id]);
+  res.json({ success: true });
+});
 
 module.exports = router;

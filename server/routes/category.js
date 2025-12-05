@@ -1,6 +1,10 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const pool = require("../db");
 
-// TODO: Implement category routes
+router.get("/", async (req, res) => {
+  const [rows] = await pool.query("SELECT * FROM categories");
+  res.json(rows);
+});
 
 module.exports = router;

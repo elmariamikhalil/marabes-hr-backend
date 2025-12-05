@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../App';
-import { db } from '../services/mockDb';
-import { TimeOffRequest } from '../types';
-import { Check, X, Download, Clock } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../App";
+import * as api from "../services/api";
+import { TimeOffRequest } from "../types";
+import { Check, X, Download, Clock } from "lucide-react";
 
 const TimeOff: React.FC = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState<TimeOffRequest[]>([]);
-  const [newRequest, setNewRequest] = useState({ type: 'Vacation', startDate: '', endDate: '', reason: '' });
+  const [newRequest, setNewRequest] = useState({
+    type: "Vacation",
+    startDate: "",
+    endDate: "",
+    reason: "",
+  });
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -16,10 +21,10 @@ const TimeOff: React.FC = () => {
 
   const loadRequests = async () => {
     const all = await db.getTimeOffRequests();
-    if (user?.role === 'ADMIN') {
+    if (user?.role === "ADMIN") {
       setRequests(all);
     } else {
-      setRequests(all.filter(r => r.userId === user?.id));
+      setRequests(all.filter((r) => r.userId === user?.id));
     }
   };
 
@@ -32,21 +37,31 @@ const TimeOff: React.FC = () => {
       type: newRequest.type as any,
       startDate: newRequest.startDate,
       endDate: newRequest.endDate,
-      reason: newRequest.reason
+      reason: newRequest.reason,
     });
     setShowForm(false);
     loadRequests();
   };
 
-  const handleStatus = async (id: string, status: 'APPROVED' | 'REJECTED') => {
-    await db.updateTimeOffStatus(id, status, status === 'APPROVED' ? 'Have fun!' : 'Coverage needed.');
+  const handleStatus = async (id: string, status: "APPROVED" | "REJECTED") => {
+    await db.updateTimeOffStatus(
+      id,
+      status,
+      status === "APPROVED" ? "Have fun!" : "Coverage needed."
+    );
     loadRequests();
   };
 
   const handleExport = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "RequestID,User,Type,Start,End,Status\n"
-      + requests.map(r => `${r.id},${r.userName},${r.type},${r.startDate},${r.endDate},${r.status}`).join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      "RequestID,User,Type,Start,End,Status\n" +
+      requests
+        .map(
+          (r) =>
+            `${r.id},${r.userName},${r.type},${r.startDate},${r.endDate},${r.status}`
+        )
+        .join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -60,12 +75,18 @@ const TimeOff: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Time Off</h1>
         <div className="flex gap-2">
-          {user?.role === 'ADMIN' && (
-             <button onClick={handleExport} className="btn-secondary flex items-center gap-2">
-               <Download size={16} /> Export
-             </button>
+          {user?.role === "ADMIN" && (
+            <button
+              onClick={handleExport}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Download size={16} /> Export
+            </button>
           )}
-          <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="btn-primary"
+          >
             + New Request
           </button>
         </div>
@@ -74,68 +95,121 @@ const TimeOff: React.FC = () => {
       {showForm && (
         <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-mint-500 animate-fade-in">
           <h3 className="font-bold mb-4">Submit Request</h3>
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <form
+            onSubmit={handleCreate}
+            className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end"
+          >
             <div>
               <label className="text-xs text-gray-500">Type</label>
-              <select className="input-std" value={newRequest.type} onChange={e => setNewRequest({...newRequest, type: e.target.value})}>
+              <select
+                className="input-std"
+                value={newRequest.type}
+                onChange={(e) =>
+                  setNewRequest({ ...newRequest, type: e.target.value })
+                }
+              >
                 <option>Vacation</option>
                 <option>Sick</option>
                 <option>Personal</option>
               </select>
             </div>
             <div>
-               <label className="text-xs text-gray-500">Start</label>
-               <input type="date" required className="input-std" onChange={e => setNewRequest({...newRequest, startDate: e.target.value})} />
+              <label className="text-xs text-gray-500">Start</label>
+              <input
+                type="date"
+                required
+                className="input-std"
+                onChange={(e) =>
+                  setNewRequest({ ...newRequest, startDate: e.target.value })
+                }
+              />
             </div>
             <div>
-               <label className="text-xs text-gray-500">End</label>
-               <input type="date" required className="input-std" onChange={e => setNewRequest({...newRequest, endDate: e.target.value})} />
+              <label className="text-xs text-gray-500">End</label>
+              <input
+                type="date"
+                required
+                className="input-std"
+                onChange={(e) =>
+                  setNewRequest({ ...newRequest, endDate: e.target.value })
+                }
+              />
             </div>
-            <button type="submit" className="btn-primary">Submit</button>
+            <button type="submit" className="btn-primary">
+              Submit
+            </button>
           </form>
         </div>
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left">
-           <thead className="bg-gray-50 text-gray-500 text-sm">
-             <tr>
-               <th className="p-4">Employee</th>
-               <th className="p-4">Type</th>
-               <th className="p-4">Dates</th>
-               <th className="p-4">Status</th>
-               {user?.role === 'ADMIN' && <th className="p-4 text-right">Action</th>}
-             </tr>
-           </thead>
-           <tbody className="divide-y divide-gray-100">
-             {requests.map(req => (
-               <tr key={req.id}>
-                 <td className="p-4 font-medium">{req.userName}</td>
-                 <td className="p-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{req.type}</span></td>
-                 <td className="p-4 text-sm text-gray-600">{req.startDate} to {req.endDate}</td>
-                 <td className="p-4">
-                   <span className={`px-2 py-1 rounded-full text-xs font-bold 
-                      ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' : 
-                        req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 
-                        'bg-yellow-100 text-yellow-700'}`}>
-                      {req.status}
-                   </span>
-                 </td>
-                 {user?.role === 'ADMIN' && (
-                   <td className="p-4 text-right">
-                     {req.status === 'PENDING' && (
-                       <div className="flex justify-end gap-2">
-                         <button onClick={() => handleStatus(req.id, 'APPROVED')} className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100"><Check size={18} /></button>
-                         <button onClick={() => handleStatus(req.id, 'REJECTED')} className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100"><X size={18} /></button>
-                       </div>
-                     )}
-                   </td>
-                 )}
-               </tr>
-             ))}
-           </tbody>
+          <thead className="bg-gray-50 text-gray-500 text-sm">
+            <tr>
+              <th className="p-4">Employee</th>
+              <th className="p-4">Type</th>
+              <th className="p-4">Dates</th>
+              <th className="p-4">Status</th>
+              {user?.role === "ADMIN" && (
+                <th className="p-4 text-right">Action</th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {requests.map((req) => (
+              <tr key={req.id}>
+                <td className="p-4 font-medium">{req.userName}</td>
+                <td className="p-4">
+                  <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                    {req.type}
+                  </span>
+                </td>
+                <td className="p-4 text-sm text-gray-600">
+                  {req.startDate} to {req.endDate}
+                </td>
+                <td className="p-4">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-bold 
+                      ${
+                        req.status === "APPROVED"
+                          ? "bg-green-100 text-green-700"
+                          : req.status === "REJECTED"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                  >
+                    {req.status}
+                  </span>
+                </td>
+                {user?.role === "ADMIN" && (
+                  <td className="p-4 text-right">
+                    {req.status === "PENDING" && (
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleStatus(req.id, "APPROVED")}
+                          className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100"
+                        >
+                          <Check size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleStatus(req.id, "REJECTED")}
+                          className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
         </table>
-        {requests.length === 0 && <div className="p-8 text-center text-gray-400">No requests found.</div>}
+        {requests.length === 0 && (
+          <div className="p-8 text-center text-gray-400">
+            No requests found.
+          </div>
+        )}
       </div>
 
       <style>{`
