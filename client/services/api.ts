@@ -10,6 +10,34 @@ import {
 
 const API_BASE = "http://localhost:5000";
 
+// Set token in headers
+const setAuthToken = (token: string | null) => {
+  if (token) {
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  } else {
+    delete axios.defaults.headers.common["Authorization"];
+  }
+};
+
+// Auth
+export const login = async (email: string, password: string) => {
+  const res = await axios.post(`${API_BASE}/auth/login`, { email, password });
+  if (res.data.token) {
+    localStorage.setItem("marabes_token", res.data.token);
+    setAuthToken(res.data.token);
+  }
+  return res.data;
+};
+
+export const logout = () => {
+  localStorage.removeItem("marabes_token");
+  setAuthToken(null);
+};
+
+// Initialize token on load
+const token = localStorage.getItem("marabes_token");
+if (token) setAuthToken(token);
+
 // Users
 export const getUsers = async (): Promise<Employee[]> => {
   const res = await axios.get(`${API_BASE}/users`);
@@ -65,6 +93,11 @@ export const getCategories = async (): Promise<EvaluationCategory[]> => {
   return res.data;
 };
 
+export const addCategory = async (name: string) => {
+  const res = await axios.post(`${API_BASE}/categories`, { name });
+  return res.data;
+};
+
 // Scores
 export const getScores = async (): Promise<UserScore[]> => {
   const res = await axios.get(`${API_BASE}/scores`);
@@ -79,6 +112,13 @@ export const addScore = async (score: Omit<UserScore, "id">) => {
 // Courses
 export const getCourses = async (): Promise<Course[]> => {
   const res = await axios.get(`${API_BASE}/courses`);
+  return res.data;
+};
+
+export const addCourse = async (
+  course: Omit<Course, "id" | "enrolledCount">
+) => {
+  const res = await axios.post(`${API_BASE}/courses`, course);
   return res.data;
 };
 
@@ -108,5 +148,10 @@ export const clockIn = async (userId: string) => {
 
 export const clockOut = async (userId: string) => {
   const res = await axios.post(`${API_BASE}/attendance/${userId}/clockout`);
+  return res.data;
+};
+
+export const getAttendanceHistory = async (userId: string) => {
+  const res = await axios.get(`${API_BASE}/attendance/${userId}/history`);
   return res.data;
 };

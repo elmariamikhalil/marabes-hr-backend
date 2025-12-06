@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../App";
 import * as api from "../services/api";
 import { TimeOffRequest } from "../types";
-import { Check, X, Download, Clock } from "lucide-react";
+import { Check, X, Download, Trash2 } from "lucide-react";
 
 const TimeOff: React.FC = () => {
   const { user } = useAuth();
@@ -14,13 +14,15 @@ const TimeOff: React.FC = () => {
     reason: "",
   });
   const [showForm, setShowForm] = useState(false);
+  const [stats, setStats] = useState({ total: 0, daysTaken: 0 });
 
   useEffect(() => {
     loadRequests();
+    if (user) loadStats();
   }, [user]);
 
   const loadRequests = async () => {
-    const all = await db.getTimeOffRequests();
+    const all = await api.getTimeOffRequests();
     if (user?.role === "ADMIN") {
       setRequests(all);
     } else {
@@ -28,10 +30,19 @@ const TimeOff: React.FC = () => {
     }
   };
 
+  const loadStats = async () => {
+    if (!user) return;
+    const response = await fetch(
+      `http://localhost:5000/timeoff/stats/${user.id}`
+    );
+    const data = await response.json();
+    setStats(data);
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    await db.addTimeOffRequest({
+    await api.addTimeOffRequest({
       userId: user.id,
       userName: user.name,
       type: newRequest.type as any,
@@ -40,15 +51,23 @@ const TimeOff: React.FC = () => {
       reason: newRequest.reason,
     });
     setShowForm(false);
+    setNewRequest({ type: "Vacation", startDate: "", endDate: "", reason: "" });
     loadRequests();
+    loadStats();
   };
 
   const handleStatus = async (id: string, status: "APPROVED" | "REJECTED") => {
-    await db.updateTimeOffStatus(
+    await api.updateTimeOffStatus(
       id,
       status,
-      status === "APPROVED" ? "Have fun!" : "Coverage needed."
+      status === "APPROVED" ? "Approved" : "Not approved"
     );
+    loadRequests();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Delete this request?")) return;
+    await fetch(`http://localhost:5000/timeoff/${id}`, { method: "DELETE" });
     loadRequests();
   };
 
@@ -92,12 +111,33 @@ const TimeOff: React.FC = () => {
         </div>
       </div>
 
+      {user?.role === "EMPLOYEE" && (
+        <div className="bg-mint-50 border border-mint-200 rounded-lg p-4 flex justify-around text-center">
+          <div>
+            <p className="text-2xl font-bold text-mint-700">{stats.total}</p>
+            <p className="text-xs text-gray-600">Total Requests</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-mint-700">
+              {stats.daysTaken}
+            </p>
+            <p className="text-xs text-gray-600">Days Taken</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-mint-700">
+              {20 - (stats.daysTaken || 0)}
+            </p>
+            <p className="text-xs text-gray-600">Days Remaining</p>
+          </div>
+        </div>
+      )}
+
       {showForm && (
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-mint-500 animate-fade-in">
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-mint-500">
           <h3 className="font-bold mb-4">Submit Request</h3>
           <form
             onSubmit={handleCreate}
-            className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end"
+            className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end"
           >
             <div>
               <label className="text-xs text-gray-500">Type</label>
@@ -119,6 +159,7 @@ const TimeOff: React.FC = () => {
                 type="date"
                 required
                 className="input-std"
+                value={newRequest.startDate}
                 onChange={(e) =>
                   setNewRequest({ ...newRequest, startDate: e.target.value })
                 }
@@ -130,8 +171,20 @@ const TimeOff: React.FC = () => {
                 type="date"
                 required
                 className="input-std"
+                value={newRequest.endDate}
                 onChange={(e) =>
                   setNewRequest({ ...newRequest, endDate: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Reason</label>
+              <input
+                type="text"
+                className="input-std"
+                value={newRequest.reason}
+                onChange={(e) =>
+                  setNewRequest({ ...newRequest, reason: e.target.value })
                 }
               />
             </div>
@@ -150,9 +203,7 @@ const TimeOff: React.FC = () => {
               <th className="p-4">Type</th>
               <th className="p-4">Dates</th>
               <th className="p-4">Status</th>
-              {user?.role === "ADMIN" && (
-                <th className="p-4 text-right">Action</th>
-              )}
+              <th className="p-4 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -181,10 +232,10 @@ const TimeOff: React.FC = () => {
                     {req.status}
                   </span>
                 </td>
-                {user?.role === "ADMIN" && (
-                  <td className="p-4 text-right">
-                    {req.status === "PENDING" && (
-                      <div className="flex justify-end gap-2">
+                <td className="p-4 text-right">
+                  <div className="flex justify-end gap-2">
+                    {user?.role === "ADMIN" && req.status === "PENDING" && (
+                      <>
                         <button
                           onClick={() => handleStatus(req.id, "APPROVED")}
                           className="p-1 bg-green-50 text-green-600 rounded hover:bg-green-100"
@@ -197,10 +248,18 @@ const TimeOff: React.FC = () => {
                         >
                           <X size={18} />
                         </button>
-                      </div>
+                      </>
                     )}
-                  </td>
-                )}
+                    {(user?.role === "ADMIN" || req.userId === user?.id) && (
+                      <button
+                        onClick={() => handleDelete(req.id)}
+                        className="p-1 bg-gray-50 text-gray-600 rounded hover:bg-gray-100"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

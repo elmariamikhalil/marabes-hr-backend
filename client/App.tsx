@@ -21,6 +21,8 @@ import TimeOff from "./pages/TimeOff";
 import Evaluations from "./pages/Evaluations";
 import Courses from "./pages/Courses";
 import Layout from "./components/Layout";
+import Profile from "./pages/Profile";
+import Reports from "./pages/Reports";
 
 interface AuthContextType {
   user: Employee | null;
@@ -38,25 +40,29 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("marabes_user");
-    if (storedUser) {
+    const token = localStorage.getItem("marabes_token");
+    if (storedUser && token) {
       setUser(JSON.parse(storedUser));
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, pass: string) => {
-    const foundUser = await api.getUserByEmail(email);
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem("marabes_user", JSON.stringify(foundUser));
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await api.login(email, password);
+      setUser(response.user);
+      localStorage.setItem("marabes_user", JSON.stringify(response.user));
       return true;
+    } catch (error) {
+      console.error("Login failed:", error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("marabes_user");
+    api.logout();
   };
 
   return (
@@ -95,11 +101,13 @@ const App = () => {
             }
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="profile" element={<Profile />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="employees" element={<Employees />} />
             <Route path="time-off" element={<TimeOff />} />
             <Route path="evaluations" element={<Evaluations />} />
             <Route path="courses" element={<Courses />} />
+            <Route path="reports" element={<Reports />} />
           </Route>
         </Routes>
       </HashRouter>

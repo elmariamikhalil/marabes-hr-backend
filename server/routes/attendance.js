@@ -10,16 +10,23 @@ router.get("/:userId/today", async (req, res) => {
   res.json(rows[0] || null);
 });
 
+router.get("/:userId/history", async (req, res) => {
+  const [rows] = await pool.query(
+    "SELECT * FROM attendance WHERE userId=? ORDER BY date DESC LIMIT 30",
+    [req.params.userId]
+  );
+  res.json(rows);
+});
+
 router.post("/:userId/clockin", async (req, res) => {
   const [result] = await pool.query(
     'INSERT INTO attendance (userId, date, clockInTime, status) VALUES (?, CURDATE(), NOW(), "CLOCKED_IN")',
     [req.params.userId]
   );
-  res.json({
-    id: result.insertId,
-    userId: req.params.userId,
-    status: "CLOCKED_IN",
-  });
+  const [newRecord] = await pool.query("SELECT * FROM attendance WHERE id=?", [
+    result.insertId,
+  ]);
+  res.json(newRecord[0]);
 });
 
 router.post("/:userId/clockout", async (req, res) => {
@@ -27,7 +34,11 @@ router.post("/:userId/clockout", async (req, res) => {
     'UPDATE attendance SET clockOutTime=NOW(), status="CLOCKED_OUT" WHERE userId=? AND date=CURDATE()',
     [req.params.userId]
   );
-  res.json({ success: true });
+  const [updated] = await pool.query(
+    "SELECT * FROM attendance WHERE userId=? AND date=CURDATE()",
+    [req.params.userId]
+  );
+  res.json(updated[0]);
 });
 
 module.exports = router;

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../App";
 import * as api from "../services/api";
 import { AttendanceRecord } from "../types";
-import { Users, Calendar, Award, Fingerprint } from "lucide-react";
+import { Users, Calendar, Award, Fingerprint, Clock } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -12,6 +12,9 @@ const Dashboard: React.FC = () => {
     avgScore: 0,
   });
   const [attendance, setAttendance] = useState<AttendanceRecord | null>(null);
+  const [attendanceHistory, setAttendanceHistory] = useState<
+    AttendanceRecord[]
+  >([]);
   const [isScanning, setIsScanning] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -39,6 +42,9 @@ const Dashboard: React.FC = () => {
       if (user) {
         const todayRecord = await api.getTodayAttendance(user.id);
         setAttendance(todayRecord);
+
+        const history = await api.getAttendanceHistory(user.id);
+        setAttendanceHistory(history.slice(0, 7));
       }
     };
     fetchData();
@@ -56,6 +62,10 @@ const Dashboard: React.FC = () => {
       }
       const updated = await api.getTodayAttendance(user.id);
       setAttendance(updated);
+
+      const history = await api.getAttendanceHistory(user.id);
+      setAttendanceHistory(history.slice(0, 7));
+
       setIsScanning(false);
     }, 1500);
   };
@@ -76,6 +86,14 @@ const Dashboard: React.FC = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const calculateHours = (record: AttendanceRecord) => {
+    if (!record.clockInTime || !record.clockOutTime) return "--";
+    const start = new Date(record.clockInTime);
+    const end = new Date(record.clockOutTime);
+    const hours = Math.abs(end.getTime() - start.getTime()) / 36e5;
+    return hours.toFixed(1);
   };
 
   return (
@@ -209,6 +227,59 @@ const Dashboard: React.FC = () => {
               color="bg-purple-100"
             />
           </div>
+        </div>
+      </div>
+
+      {/* Attendance History */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Clock className="text-mint-600" size={20} />
+          Recent Attendance
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500">
+              <tr>
+                <th className="p-3 text-left">Date</th>
+                <th className="p-3 text-left">Clock In</th>
+                <th className="p-3 text-left">Clock Out</th>
+                <th className="p-3 text-left">Hours</th>
+                <th className="p-3 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {attendanceHistory.map((record) => (
+                <tr key={record.id} className="hover:bg-gray-50">
+                  <td className="p-3">
+                    {new Date(record.date).toLocaleDateString()}
+                  </td>
+                  <td className="p-3">{formatTime(record.clockInTime)}</td>
+                  <td className="p-3">{formatTime(record.clockOutTime)}</td>
+                  <td className="p-3 font-semibold">
+                    {calculateHours(record)}h
+                  </td>
+                  <td className="p-3">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        record.status === "CLOCKED_OUT"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {record.status === "CLOCKED_OUT"
+                        ? "Complete"
+                        : "In Progress"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {attendanceHistory.length === 0 && (
+            <div className="text-center py-8 text-gray-400">
+              No attendance history yet
+            </div>
+          )}
         </div>
       </div>
     </div>

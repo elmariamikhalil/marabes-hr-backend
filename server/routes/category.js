@@ -7,4 +7,13 @@ router.get("/", async (req, res) => {
   res.json(rows);
 });
 
+router.post("/", async (req, res) => {
+  const { name } = req.body;
+  const [result] = await pool.query(
+    "INSERT INTO categories (name) VALUES (?)",
+    [name]
+  );
+  res.json({ id: result.insertId, name });
+});
+
 module.exports = router;
