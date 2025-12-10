@@ -68,43 +68,49 @@ const Evaluations: React.FC = () => {
 
     setChartData(data);
   };
-const handleAddScore = async (e: React.FormEvent) => {
-  e.preventDefault();
-  console.log("Form submitted!", newScore);
-  if (!newScore.userId || !newScore.categoryId) {
-    alert("Please select employee and category");
-    return;
-  }
+  const handleAddScore = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  try {
-    const emp = employees.find((e) => e.id === newScore.userId);
-    if (!emp) return;
+    if (!newScore.userId || !newScore.categoryId) {
+      alert("Please select employee and category");
+      return;
+    }
 
-    await api.addScore({
-      ...newScore,
-      userName: emp.name,
-    });
+    try {
+      const emp = employees.find(
+        (e) => e.id.toString() === newScore.userId.toString()
+      );
+      if (!emp) {
+        alert("Employee not found");
+        return;
+      }
 
-    // reset form
-    setNewScore({
-      userId: "",
-      categoryId: "",
-      score: 0,
-      feedback: "",
-      date: new Date().toISOString().split("T")[0],
-    });
-    setShowAddScore(false);
+      await api.addScore({
+        userId: parseInt(newScore.userId),
+        userName: emp.name,
+        categoryId: parseInt(newScore.categoryId),
+        score: parseInt(newScore.score.toString()),
+        date: newScore.date,
+        feedback: newScore.feedback || "",
+      });
 
-    // refresh scores
-    const s = await api.getScores(); // make sure this matches your backend: "/scores"
-    setScores(s);
-    processChartData(categories, s);
-  } catch (err) {
-    console.error("Failed to add score:", err);
-    alert("Failed to add score. Check console for details.");
-  }
-};
+      setNewScore({
+        userId: "",
+        categoryId: "",
+        score: 0,
+        feedback: "",
+        date: new Date().toISOString().split("T")[0],
+      });
+      setShowAddScore(false);
 
+      const s = await api.getScores();
+      setScores(s);
+      processChartData(categories, s);
+    } catch (err: any) {
+      console.error("Failed to add score:", err);
+      alert(`Failed to add score: ${err.response?.data?.error || err.message}`);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -241,22 +247,22 @@ const handleAddScore = async (e: React.FormEvent) => {
                 </select>
               </div>
               <div>
-                 <label className="text-xs text-gray-500">Score (0-100)</label>
-                 <input
-                     type="number"
-                     required
-                     min={0}
-                     max={100}
-                     className="input-std"
-                     value={newScore.score}
-                     onChange={(e) => {
+                <label className="text-xs text-gray-500">Score (0-100)</label>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  max={100}
+                  className="input-std"
+                  value={newScore.score}
+                  onChange={(e) => {
                     const val = parseInt(e.target.value);
-                             setNewScore({
-                              ...newScore,
-                              score: isNaN(val) ? 0 : val,
-                              });
-                            }}
-                          />
+                    setNewScore({
+                      ...newScore,
+                      score: isNaN(val) ? 0 : val,
+                    });
+                  }}
+                />
               </div>
               <div>
                 <label className="text-xs text-gray-500">

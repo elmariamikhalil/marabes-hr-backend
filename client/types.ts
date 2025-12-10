@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'EMPLOYEE';
+export type Role = "ADMIN" | "EMPLOYEE";
 
 export interface User {
   id: string;
@@ -21,10 +21,10 @@ export interface TimeOffRequest {
   id: string;
   userId: string;
   userName: string; // Denormalized for simpler list view
-  type: 'Vacation' | 'Sick' | 'Personal';
+  type: "Vacation" | "Sick" | "Personal";
   startDate: string;
   endDate: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
   adminNote?: string;
   reason: string;
 }
@@ -35,13 +35,13 @@ export interface EvaluationCategory {
 }
 
 export interface UserScore {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   userName: string;
-  categoryId: string;
-  score: number; // 0-100
-  feedback?: string;
+  categoryId: number;
+  score: number;
   date: string;
+  feedback?: string;
 }
 
 export interface Course {
@@ -65,5 +65,5 @@ export interface AttendanceRecord {
   date: string; // YYYY-MM-DD
   clockInTime: string; // ISO string
   clockOutTime?: string; // ISO string
-  status: 'CLOCKED_IN' | 'CLOCKED_OUT';
+  status: "CLOCKED_IN" | "CLOCKED_OUT";
 }
